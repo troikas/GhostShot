@@ -2,7 +2,11 @@
 
 A lightweight and powerful screenshot utility for Linux and Windows. Capture screen regions, add custom watermarks, and upload to cloud services instantly.
 
-## 🚀 What's New in v1.1
+## 🚀 Update v1.2 (FIXED)
+- Fixed SXCU upload issue with custom User-Agent.
+- Added error handling for 404 response codes.
+
+## 🚀 What's New in v1.2
 - **Multi-Service Hosting:** Choose between ImgBB, SXCU.net, or FreeImage.host.
 - **Precision Capture:** Interactive region selection using the `scrot` engine.
 - **Smart Workspace:** Automatic creation and management of the `MyScreenshots` folder on your Desktop.

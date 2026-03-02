@@ -107,7 +107,7 @@ def capture_task():
                 url = response.json()['url']
             else:
                 response = requests.post("https://api.imgbb.com/1/upload",
-                                       params={"key": "68903c004f326a27e025f82e5669b76d"},
+                                       params={"key": "YOUR_API_KEY_HERE"},
                                        files={"image": open(filepath, "rb")})
                 url = response.json()['data']['url']
             root.clipboard_clear()

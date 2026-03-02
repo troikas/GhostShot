@@ -1,0 +1,24 @@
+name: Build GhostShot EXE
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install Dependencies
+      run: |
+        pip install pillow requests pyautogui pyinstaller
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --icon=logo.png GhostShot.py
+    - name: Upload EXE
+      uses: actions/upload-artifact@v3
+      with:
+        name: GhostShot-Windows
+        path: dist/GhostShot.exe

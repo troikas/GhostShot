@@ -1,41 +1,37 @@
-# 👻 GhostShot v1.0
-**The Ultimate Screenshot & Auto-Upload Tool for Freelancers**
+# GhostShot Pro v1.1
 
-GhostShot is a lightweight, powerful automation tool designed specifically for micro-task workers (SproutGigs, FreeCash, etc.) and developers who need to capture, watermark, and upload proofs in seconds.
+A lightweight and powerful screenshot utility for Linux and Windows. Capture screen regions, add custom watermarks, and upload to cloud services instantly.
 
+## 🚀 What's New in v1.1
+- **Multi-Service Hosting:** Choose between ImgBB, SXCU.net, or FreeImage.host.
+- **Precision Capture:** Interactive region selection using the `scrot` engine.
+- **Smart Workspace:** Automatic creation and management of the `MyScreenshots` folder on your Desktop.
+- **Improved History Log:** Double-click entries to open files locally or copy URLs with one click.
+- **Persistent Settings:** Your API keys, watermarks, and preferences are saved in `config.ini`.
 
+## 📥 Installation
+
+### Linux (Mint/Ubuntu/Debian)
+1. Install dependencies:
+   `sudo apt update && sudo apt install scrot python3-pil`
+2. Install the package:
+   `sudo dpkg -i ghostshot_1.1_amd64.deb`
+
+### Windows
+1. Download `GhostShot_v1.1.exe`.
+2. Run and start capturing.
+
+## ⚙️ Configuration
+Access the **Settings** menu to:
+- Enter your **API Keys**.
+- Select your **Upload Provider**.
+- Customize your **Watermark** text.
+- Change the **Save Directory**.
+
+## 🛠 Fixes in this version
+- Resolved `AttributeError: save_locally` crash.
+- Fixed path detection for non-English Linux environments.
+- Corrected History TreeView display issues.
 
 ---
-
-## 🚀 Key Features
-* **Smart Window Capture:** Automatically detects the active window (perfect for dual-monitor setups).
-* **Custom Watermarking:** Adds a professional, translucent centered watermark to your proofs.
-* **One-Click Cloud Upload:** Supports **SXCU** (Ultra Fast) and **ImgBB** (High Reliability).
-* **Auto-Copy to Clipboard:** The image URL is copied instantly after upload.
-* **History Logs:** Never lose a link! All screenshots and URLs are saved in a local database.
-* **Privacy First:** Toggle internet upload on/off with a single checkbox.
-
----
-
-## 🛠️ Installation
-
-### For Linux (Ubuntu/Mint/Debian)
-1. Download the `.deb` package from the [Releases](https://github.com/YOUR_USERNAME/GhostShot/releases) section.
-2. Double-click to install.
-3. Find **GhostShot** in your Applications menu.
-
-### For Windows
-1. Download `GhostShot.exe`.
-2. Run it (no installation required).
-
----
-
-## 📦 Requirements (If running from source)
-If you want to run the Python script directly, you will need:
-* Python 3.6+
-* `pyautogui`, `Pillow`, `requests`
-* Linux users: `xdotool`, `xwininfo`
-
-```bash
-pip install pyautogui Pillow requests
-sudo apt install xdotool xwininfo
+*Created by troikas*

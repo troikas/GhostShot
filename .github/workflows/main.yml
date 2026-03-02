@@ -6,19 +6,24 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
+
     - name: Install Dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install pillow requests pyautogui pyinstaller
+
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --windowed --icon=logo.png GhostShot.py
+        pyinstaller --onefile --windowed --icon=logo.png --name GhostShot GhostShot.py
+
     - name: Upload EXE
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: GhostShot-Windows
+        name: GhostShot-Windows-Build
         path: dist/GhostShot.exe

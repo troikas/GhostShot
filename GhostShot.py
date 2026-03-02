@@ -112,16 +112,44 @@ class GhostShot:
 
     def do_upload(self, path):
         try:
+            # Ορίζουμε το User-Agent για να μας δέχεται το SXCU και οι άλλοι πάροχοι
+            headers = {
+                'User-Agent': 'GhostShot-Pro/1.1 (Linux Mint; troikas)'
+            }
+
             if self.provider == "ImgBB":
-                r = requests.post("https://api.imgbb.com/1/upload", data={"key": self.api_key}, files={"image": open(path, "rb")})
+                r = requests.post("https://api.imgbb.com/1/upload",
+                                 data={"key": self.api_key},
+                                 files={"image": open(path, "rb")},
+                                 headers=headers)
                 return r.json()['data']['url']
+
             elif self.provider == "SXCU":
-                r = requests.post("https://sxcu.net/api/files/upload", files={"file": open(path, "rb")})
-                return r.json()['url']
+                # Δοκιμάζουμε το σωστό endpoint
+                url = "https://sxcu.net/api/files/upload"
+                files = {"file": open(path, "rb")}
+
+                r = requests.post(url, files=files, headers=headers)
+
+                # Έλεγχος αν η απάντηση είναι όντως JSON και όχι HTML error
+                if r.status_code == 200:
+                    try:
+                        return r.json()['url']
+                    except:
+                        return "JSON Error from SXCU"
+                else:
+                    print(f"SXCU Server Error: {r.status_code}")
+                    return f"Error {r.status_code}"
+
             elif self.provider == "FreeImage":
-                r = requests.post("https://freeimage.host/api/1/upload", data={"key": self.api_key}, files={"source": open(path, "rb")})
+                r = requests.post("https://freeimage.host/api/1/upload",
+                                 data={"key": self.api_key},
+                                 files={"source": open(path, "rb")},
+                                 headers=headers)
                 return r.json()['image']['url']
-        except: return "Upload Failed"
+        except Exception as e:
+            print(f"Upload Error: {e}") # Για να βλέπεις το λάθος στο τερματικό
+            return "Upload Failed"
 
     def open_settings(self):
         win = tk.Toplevel(self.root)

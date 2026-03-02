@@ -1,187 +1,170 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox, filedialog, ttk
 import pyautogui
-import os
-import time
-import subprocess
+from PIL import Image, ImageDraw
 import requests
-import re
-from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont
-import sys
+import os
+import datetime
+import configparser
+import subprocess
 
-# Directory Setup (Use a standard hidden config folder)
-BASE_DIR = os.path.expanduser("~/.config/GhostShot")
-HISTORY_FILE = os.path.join(BASE_DIR, "history.txt")
-CONFIG_FILE = os.path.join(BASE_DIR, "config.txt")
-if not os.path.exists(BASE_DIR): os.makedirs(BASE_DIR)
+class GhostShot:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("GhostShot Pro v4.6 - FIXED")
+        self.root.geometry("750x580")
 
-# System Path Helper (for assets when packed)
-def get_asset_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+        self.config_file = "config.ini"
+        self.config = configparser.ConfigParser()
+        self.load_settings()
 
-def get_active_window_region():
-    try:
-        window_id = subprocess.check_output(['xdotool', 'getactivewindow']).decode().strip()
-        stats = subprocess.check_output(['xwininfo', '-id', window_id]).decode()
-        x = int(re.search(r'Absolute upper-left X:\s+(-?\d+)', stats).group(1))
-        y = int(re.search(r'Absolute upper-left Y:\s+(-?\d+)', stats).group(1))
-        w = int(re.search(r'Width:\s+(\d+)', stats).group(1))
-        h = int(re.search(r'Height:\s+(\d+)', stats).group(1))
-        return (x, y, w, h)
-    except: return None
+        # --- UI ---
+        top_frame = tk.Frame(root)
+        top_frame.pack(pady=10, fill=tk.X)
 
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f: return f.read().strip()
-    return "GhostWorker"
+        tk.Button(top_frame, text="Select Area & Save", command=self.save_locally,
+                  width=22, bg="#f0f0f0", fg="black").pack(side=tk.LEFT, padx=10)
 
-def clear_history():
-    if messagebox.askyesno("Confirm", "Are you sure you want to clear all history?"):
-        if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
-        for item in history_table.get_children(): history_table.delete(item)
-        status_label.config(text="History cleared!", fg="blue")
+        tk.Button(top_frame, text="Select & Upload", command=self.capture_and_upload,
+                  bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), width=22).pack(side=tk.LEFT, padx=10)
 
-def capture_task():
-    user_text = name_entry.get().strip()
-    with open(CONFIG_FILE, "w") as f: f.write(user_text)
+        tk.Button(top_frame, text="Settings", command=self.open_settings, width=10).pack(side=tk.RIGHT, padx=10)
 
-    status_label.config(text="⏳ 2s Delay: Click your target window!", fg="orange")
-    root.update()
+        # Treeview
+        tk.Label(root, text="History (Double click to open):", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10)
+        self.tree = ttk.Treeview(root, columns=("Time", "File", "Provider", "Link"), show='headings')
+        self.tree.heading("Time", text="Time")
+        self.tree.heading("File", text="File Name")
+        self.tree.heading("Provider", text="Service")
+        self.tree.heading("Link", text="Link / Path")
+        self.tree.column("Time", width=100); self.tree.column("File", width=130)
+        self.tree.column("Provider", width=90); self.tree.column("Link", width=400)
+        self.tree.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
-    time.sleep(2)
-    region = get_active_window_region()
-    root.withdraw()
-    time.sleep(0.3)
+        self.tree.bind("<Double-1>", self.on_double_click)
 
-    desktop = subprocess.check_output(['xdg-user-dir', 'DESKTOP']).decode('utf-8').strip()
-    folder_path = os.path.join(desktop, "MyScreenshots")
-    if not os.path.exists(folder_path): os.makedirs(folder_path)
+        bot_frame = tk.Frame(root)
+        bot_frame.pack(pady=10)
+        tk.Button(bot_frame, text="Copy Link", command=self.copy_from_tree, width=15, bg="#2196F3", fg="white").pack(side=tk.LEFT, padx=5)
+        tk.Button(bot_frame, text="Open Folder", command=self.open_screenshot_folder, width=15).pack(side=tk.LEFT, padx=5)
 
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-    filename = f"cap_{datetime.now().strftime('%H%M%S')}.png"
-    filepath = os.path.join(folder_path, filename)
+        self.status_label = tk.Label(root, text="Ready", fg="gray")
+        self.status_label.pack()
 
-    # Capture & Intelligent Watermark
-    pic = pyautogui.screenshot(region=region) if region else pyautogui.screenshot()
+    def load_settings(self):
+        home = os.path.expanduser("~")
+        desktop = os.path.join(home, "Desktop")
+        if not os.path.exists(desktop): desktop = os.path.join(home, "Επιφάνεια εργασίας")
+        default_folder = os.path.join(desktop, "MyScreenshots")
+        if not os.path.exists(default_folder): os.makedirs(default_folder)
 
-    if user_text:
-        pic = pic.convert("RGBA")
-        overlay = Image.new("RGBA", pic.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay)
+        if os.path.exists(self.config_file):
+            self.config.read(self.config_file)
+            self.api_key = self.config.get('SETTINGS', 'api_key', fallback="")
+            self.watermark_text = self.config.get('SETTINGS', 'watermark', fallback="GhostShot")
+            self.save_path = self.config.get('SETTINGS', 'save_path', fallback=default_folder)
+            self.provider = self.config.get('SETTINGS', 'provider', fallback="ImgBB")
+        else:
+            self.api_key = ""; self.watermark_text = "GhostShot"
+            self.save_path = default_folder; self.provider = "ImgBB"
 
-        w, h = pic.size
-        rect_w, rect_h = 220, 40
-        padding = 10
-        x1, y1 = w - rect_w - padding, h - rect_h - padding
-        x2, y2 = w - padding, h - padding
+    def save_locally(self):
+        self.take_screenshot(upload=False)
 
-        # Translucent background
-        draw.rectangle([x1, y1, x2, y2], fill=(0, 0, 0, 150))
+    def capture_and_upload(self):
+        if self.provider != "SXCU" and not self.api_key:
+            messagebox.showerror("Error", f"API Key required for {self.provider}!")
+            return
+        self.take_screenshot(upload=True)
 
-        # Centering Text (Uses base font to avoid path issues)
-        text_w, text_h = draw.textsize(user_text)
-        text_x = x1 + (rect_w - text_w) / 2
-        text_y = y1 + (rect_h - text_h) / 2 - 2
+    def take_screenshot(self, upload):
+        self.root.withdraw()
+        self.root.after(500, lambda: self.capture_logic(upload))
 
-        draw.text((text_x, text_y), user_text, fill=(255, 255, 255, 255))
+    def capture_logic(self, upload):
+        now = datetime.datetime.now()
+        filename = f"Shot_{now.strftime('%H%M%S')}.png"
+        full_path = os.path.join(self.save_path, filename)
 
-        pic = Image.alpha_composite(pic, overlay)
-        pic = pic.convert("RGB")
-
-    pic.save(filepath)
-    root.deiconify()
-
-    url = "LOCAL_ONLY"
-    if upload_var.get():
-        status_label.config(text="⏳ Uploading...", fg="blue")
-        root.update()
         try:
-            server = server_var.get()
-            if server == "SXCU (Fast)":
-                response = requests.post("https://sxcu.net/api/files/create", files={"file": open(filepath, "rb")})
-                url = response.json()['url']
-            else:
-                response = requests.post("https://api.imgbb.com/1/upload",
-                                       params={"key": "YOUR_API_KEY_HERE"},
-                                       files={"image": open(filepath, "rb")})
-                url = response.json()['data']['url']
-            root.clipboard_clear()
-            root.clipboard_append(url)
-            status_label.config(text="✅ SUCCESS! Link copied.", fg="green")
-        except:
-            status_label.config(text="❌ Upload Error!", fg="red")
-            url = "UPLOAD_FAILED"
-    else:
-        status_label.config(text=f"✅ Saved as {filename}", fg="green")
+            # Λήψη με scrot (σιγουρέψου ότι έτρεξες: sudo apt install scrot)
+            subprocess.run(["scrot", "-s", full_path])
 
-    history_table.insert('', 0, values=(timestamp, filename, url))
-    with open(HISTORY_FILE, "a") as f: f.write(f"{timestamp}|{filename}|{url}\n")
+            if os.path.exists(full_path):
+                img = Image.open(full_path)
+                draw = ImageDraw.Draw(img)
+                draw.text((15, 15), self.watermark_text, fill=(255, 255, 255))
+                img.save(full_path)
 
-# --- GUI Setup ---
-root = tk.Tk()
-root.title("GhostShot v7.0")
-root.geometry("850x680")
+                link = "Local Only"
+                if upload:
+                    self.status_label.config(text="Uploading...", fg="blue"); self.root.update()
+                    link = self.do_upload(full_path)
 
-# Note: Icon must be set here for packed versions (will handle later)
+                self.tree.insert("", 0, values=(now.strftime("%H:%M:%S"), filename, self.provider if upload else "Local", link))
+                if "http" in link:
+                    self.root.clipboard_clear(); self.root.clipboard_append(link)
+                    self.status_label.config(text="Link Copied!", fg="green")
+        except Exception as e:
+            messagebox.showerror("Error", f"Capture failed: {e}")
+        finally:
+            self.root.deiconify()
 
-header = tk.LabelFrame(root, text=" Settings ", padx=10, pady=10)
-header.pack(pady=10, fill="x", padx=20)
+    def do_upload(self, path):
+        try:
+            if self.provider == "ImgBB":
+                r = requests.post("https://api.imgbb.com/1/upload", data={"key": self.api_key}, files={"image": open(path, "rb")})
+                return r.json()['data']['url']
+            elif self.provider == "SXCU":
+                r = requests.post("https://sxcu.net/api/files/upload", files={"file": open(path, "rb")})
+                return r.json()['url']
+            elif self.provider == "FreeImage":
+                r = requests.post("https://freeimage.host/api/1/upload", data={"key": self.api_key}, files={"source": open(path, "rb")})
+                return r.json()['image']['url']
+        except: return "Upload Failed"
 
-tk.Label(header, text="Watermark Text:").grid(row=0, column=0)
-name_entry = tk.Entry(header)
-name_entry.insert(0, load_config())
-name_entry.grid(row=0, column=1, padx=10)
+    def open_settings(self):
+        win = tk.Toplevel(self.root)
+        win.title("Settings")
+        win.geometry("400x350")
 
-upload_var = tk.BooleanVar(value=False)
-chk = tk.Checkbutton(header, text="Enable Upload", variable=upload_var,
-                    font=("Arial", 11, "bold"), pady=5)
-chk.grid(row=0, column=2, padx=20)
+        tk.Label(win, text="Watermark Name:").pack(pady=5)
+        wm = tk.Entry(win, width=35); wm.insert(0, self.watermark_text); wm.pack()
 
-server_var = tk.StringVar(value="SXCU (Fast)")
-server_menu = ttk.Combobox(header, textvariable=server_var, values=["SXCU (Fast)", "ImgBB"], width=12)
-server_menu.grid(row=0, column=3, padx=5)
+        tk.Label(win, text="Upload Provider:").pack(pady=5)
+        prov_var = tk.StringVar(value=self.provider)
+        tk.OptionMenu(win, prov_var, "ImgBB", "SXCU", "FreeImage").pack()
 
-btn_frame = tk.Frame(root)
-btn_frame.pack(pady=10)
+        tk.Label(win, text="API Key:").pack(pady=5)
+        key = tk.Entry(win, width=35); key.insert(0, self.api_key); key.pack()
 
-btn = tk.Button(btn_frame, text="CAPTURE WINDOW", command=capture_task,
-               bg="#007bff", fg="white", font=("Arial", 14, "bold"), padx=20, pady=10)
-btn.grid(row=0, column=0, padx=10)
+        def save():
+            self.watermark_text, self.api_key, self.provider = wm.get(), key.get(), prov_var.get()
+            if not self.config.has_section('SETTINGS'): self.config.add_section('SETTINGS')
+            self.config.set('SETTINGS', 'watermark', self.watermark_text)
+            self.config.set('SETTINGS', 'api_key', self.api_key)
+            self.config.set('SETTINGS', 'provider', self.provider)
+            self.config.set('SETTINGS', 'save_path', self.save_path)
+            with open(self.config_file, 'w') as f: self.config.write(f)
+            win.destroy()
+        tk.Button(win, text="Save Settings", command=save, bg="#4CAF50", fg="white").pack(pady=20)
 
-clear_btn = tk.Button(btn_frame, text="Clear History", command=clear_history,
-                     bg="#dc3545", fg="white", font=("Arial", 10))
-clear_btn.grid(row=0, column=1, padx=10)
+    def on_double_click(self, event):
+        sel = self.tree.selection()
+        if sel:
+            path = os.path.join(self.save_path, self.tree.item(sel[0])['values'][1])
+            subprocess.run(["xdg-open", path])
 
-status_label = tk.Label(root, text="Tip: Double-click a row to copy its link.", fg="#666")
-status_label.pack()
+    def open_screenshot_folder(self):
+        subprocess.run(["xdg-open", self.save_path])
 
-columns = ('time', 'file', 'url')
-history_table = ttk.Treeview(root, columns=columns, show='headings')
-history_table.heading('time', text='Date/Time')
-history_table.heading('file', text='Filename')
-history_table.heading('url', text='URL / Status')
-history_table.column('url', width=450)
-history_table.pack(padx=20, pady=10, fill='both', expand=True)
+    def copy_from_tree(self):
+        sel = self.tree.selection()
+        if sel:
+            link = self.tree.item(sel[0])['values'][3]
+            self.root.clipboard_clear(); self.root.clipboard_append(link)
 
-# Function to copy link from row on double-click
-def copy_from_history(event):
-    item = history_table.selection()[0]
-    link = history_table.item(item, "values")[2]
-    if link and link != "LOCAL_ONLY" and link != "UPLOAD_FAILED":
-        root.clipboard_clear()
-        root.clipboard_append(link)
-        status_label.config(text="Link copied from history!", fg="blue")
-
-history_table.bind("<Double-1>", copy_from_history)
-
-if os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "r") as f:
-        for line in reversed(f.readlines()):
-            history_table.insert('', 'end', values=line.strip().split('|'))
-
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = GhostShot(root)
+    root.mainloop()

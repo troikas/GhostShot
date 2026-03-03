@@ -37,5 +37,10 @@ Access the **Settings** menu to:
 - Fixed path detection for non-English Linux environments.
 - Corrected History TreeView display issues.
 
+- ---
+### 🚀 Need Custom Features?
+Looking for a custom version, a specific API integration, or a similar tool?  
+**[Hire me on Fiverr](https://www.fiverr.com/dimitris_angelo/build-a-custom-python-desktop-app-with-gui-and-api-integration)**
+
 ---
 *Created by troikas*

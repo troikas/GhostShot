@@ -1,3 +1,4 @@
+[![Fiverr](https://img.shields.io/badge/Fiverr-Hire%20Me-green?style=for-the-badge&logo=fiverr)](https://www.fiverr.com/dimitris_angelo/build-a-custom-python-desktop-app-with-gui-and-api-integration)
 # GhostShot Pro v1.1
 
 A lightweight and powerful screenshot utility for Linux and Windows. Capture screen regions, add custom watermarks, and upload to cloud services instantly.

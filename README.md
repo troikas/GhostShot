@@ -39,8 +39,7 @@ Access the **Settings** menu to:
 - Corrected History TreeView display issues.
 
 - ---
-### 🚀 Need Custom Features?
-Looking for a custom version, a specific API integration, or a similar tool?  
+Looking for a custom version, a specific API integration, or professional support?  
 **[Hire me on Fiverr](https://www.fiverr.com/dimitris_angelo/build-a-custom-python-desktop-app-with-gui-and-api-integration)**
 
 ---
